@@ -22,6 +22,364 @@ SET time_zone = "+00:00";
 --
 -- Base de données : `cuisine`
 --
+#login 
+<fieldset>
+	<legend>
+		veillez remplire les champs suivant
+	</legend>
+
+<form method="post">
+
+	<center>
+	<table>
+		<tr>
+			<td>UTILISATEUR : </td>
+			<td><input type="text" name="user"></td>
+		</tr>
+		<tr>
+			<td>MOT DE PASSE : </td>
+			<td><input type="password" name="mdp"></td>
+		</tr>
+		<tr>
+			<td><input type="submit" name="envoyer"></td>
+		</tr>
+		</center>
+	</table>
+</form>
+</fieldset>
+<style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        fieldset {
+            width: 50%;
+            margin: 50px auto;
+            padding: 20px;
+            border: 2px solid #333;
+            border-radius: 10px;
+        }
+
+        legend {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        table {
+            width: 100%;
+        }
+
+        td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            box-sizing: border-box;
+        }
+
+        input[type="submit"] {
+            padding: 10px;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+
+    </style>
+<?php
+//3 - verification de login et mdp
+include('connexiondb.php');
+if(isset($_POST['envoyer'])){
+	$req = $connexion->prepare("SELECT * FROM utilisateur WHERE user = ? AND mdp = ? ") ;
+	$req->bindvalue(1 , $_POST["user"]);
+	$req->bindvalue(2 , $_POST["mdp"]);
+	$req->execute();
+	$res = $req->fetchAll();
+	if(empty($res))
+		echo "verifier le nom ou le mot de passe";
+	else{
+		if($res[0][3] == "admin"){
+			session_start();
+			$getUser = $res[0][1];
+			$getIdUtilisateur = $res[0][0] ;
+			$_SESSION['user'] = $getUser;
+			$_SESSION['role'] = $res[0][3] ;
+			header('location:recetteaj.php');
+			
+		}
+		else{
+			session_start();
+			$_SESSION['role'] = $res[0][3];
+			$getUser = $res[0][1];
+			$getIdUtilisateur = $res[0][0] ;
+			$_SESSION['user'] = $getUser;
+			header('location:modiferrec.php');
+		}
+	}
+}
+?>
+#ajout de recette
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Saveurs Maison</title>
+
+	<h1>
+
+<titre>Saveurs Maison</titre>
+</h1>
+<style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        fieldset {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+
+        legend {
+            font-weight: bold;
+            color: #555;
+        }
+
+        table {
+            width: 100%;
+        }
+
+        td {
+            padding: 8px;
+        }
+
+        input[type="text"],
+        textarea,
+        input[type="time"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            box-sizing: border-box;
+        }
+
+        input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+    </style>
+
+
+</head>
+<body>
+
+<?php
+	session_start();
+
+	if (empty($_SESSION['user'])) {
+		echo "empty";
+	} elseif ($_SESSION['role'] == "utilisateur") {
+		echo "vous avez pas le droit d'acceder a cette page";
+	} else {
+		include('masterPage.php');
+	}
+?>
+
+<fieldset>
+	<legend>Ajouter recette</legend>
+	<form method="POST">
+		<table>
+			<tr>
+				<td>
+					
+						<?php
+							include('connexiondb.php');
+							$req = $connexion->prepare("SELECT idnomrec,libelle FROM nomrec");
+							$req->execute();
+							$res = $req->fetchAll();
+							foreach ($res as $item) {
+								echo "<option value=" . $item['idnomrec'] . ">" . $item['libelle'] . "</option>";
+							}
+						?>
+					</select>
+				</td>
+			</tr>
+			<tr>
+				<td>Nom :</td>
+				<td><input type="text" name="titre"></td>
+			</tr>
+			<tr>
+				<td>Liste d'ingrédients :</td>
+				<td><textarea name="liste d'ingredients"></textarea></td>
+			</tr>
+			<tr>
+				<td>Des étapes de préparation :</td>
+				<td><textarea name="étapes de preparation"></textarea></td>
+			</tr>
+			<tr>
+				<td>Durée de préparation :</td>
+				<td><input type="time" name="time" id="time"></td>
+			</tr>
+			<tr>
+				<td><input type="submit" name="ajouter" value="Ajouter"></td>
+			</tr>
+		</table>
+	</form>
+</fieldset>
+
+<?php
+	if (isset($_POST['ajouter'])) {
+		try {
+			include('connexiondb.php');
+			$req = $connexion->prepare("INSERT INTO recette(idnomrec, nom, liste_ingredients, etapesdepreparation) VALUES (?, ?, ?, ?)");
+			$req->bindValue(1, $_POST['idnomrec']);
+			$req->bindValue(2, $_POST['titre']);
+			$req->bindValue(3, $_POST['liste_ingredients']);
+			$req->bindValue(4, $_POST['etapesdepreparation']);
+			$req->execute();
+			echo "Insertion terminée sans erreur" . "<br>";
+		} catch (PDOException $e) {
+			echo "Erreur : " . $e->getMessage();
+		}
+	}
+?>
+
+</body>
+</html>
+#supprimer
+<!-- Add this section after your form for adding a recipe -->
+<fieldset>
+    <legend>Supprimer recette</legend>
+    <form method="POST">
+        <table>
+            <tr>
+                <th>Nom de recette</th>
+                <th>Action</th>
+            </tr>
+            <?php
+                // Modify the SQL query to fetch the recipes
+                $req = $connexion->prepare("SELECT idrec, nom FROM recette");
+                $req->execute();
+                $res = $req->fetchAll();
+                foreach ($res as $item) {
+                    echo "<tr>";
+                    echo "<td>" . $item['nom'] . "</td>";
+                    echo "<td><button type='submit' name='delete' value='" . $item['idrec'] . "'>Supprimer</button></td>";
+                    echo "</tr>";
+                }
+            ?>
+        </table>
+    </form>
+</fieldset>
+#connexion data base
+<?php
+	try{
+			$chaine = 'mysql:host=localhost;dbname=cuisine;charset=utf8';
+			$user = 'root' ;
+			$password = '' ;
+			$connexion = new PDO($chaine , $user , $password) ;
+		}
+		catch(PDOException $e){
+			echo "erreur : ".$e->getMessage();
+		}
+?>
+#modifier
+<style>
+
+
+/* Style de la liste des recettes */
+table {
+    width: 80%;
+    margin: 20px auto;
+    border-collapse: collapse;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+th, td {
+    padding: 12px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+th {
+    background-color: #4caf50;
+    color: white;
+}
+
+
+
+</style>
+
+<?php
+session_start();
+include('connexiondb.php');
+
+function afficherTab($req){
+    global $connexion;
+    $req = $connexion->query($req);
+    echo "liste des recettes";
+    echo '<table border="1px">';
+
+
+    while ($row = $req->fetch(PDO::FETCH_ASSOC)) {
+        echo "<tr>";
+        foreach ($row as $key => $value) {
+            echo "<td>".$value."</td>";
+        }
+        echo "</tr>";
+    }
+    echo "</table>";
+}
+
+if(empty($_SESSION['user'])){
+    // Si l'utilisateur n'est pas connecté, afficher le formulaire de connexion
+    echo '<form action="authentification.php" method="POST" >
+          <table align="">
+          <tr><td>Username:</td><td><input type="text" name="username"></td></tr>
+          <tr><td>Password:</td><td><input type="mdp" name="mdp"></td></tr>
+          <tr><td></td><td><input type="submit" name="bouton" value="Connexion" class="bouton" ></td></tr>
+          </table>
+          </form>';
+} else {
+    // Si l'utilisateur est connecté, afficher les recettes
+    afficherTab("SELECT * FROM recette");
+}
+?>
+#logout 
+<?php
+session_start();
+session_destroy();
+header("Location: login.php");
+exit();
+?>
 
 -- --------------------------------------------------------
 
